@@ -4,7 +4,7 @@ require 'cunn'
 require 'image'
 require 'nn'
 require 'optim'
-require 'cudnn'
+--require 'cudnn'
 
 num_class = 62
 samples_per_class = 1016
@@ -62,6 +62,24 @@ end
 
 function expand_data(input_image)
     --method for randomly adding RTS operation on the input image
+    input_image = torch.squeeze(input_image)
+    --print(#input_image)
+    switch = torch.rand(1)[1]
+    if switch > 0.5 then
+        --print('TRANSLATED')
+        x_translate = (torch.rand(1)[1]) * 10
+        y_translate = (torch.rand(1)[1]) * 10
+        input_image = image.translate(input_image, x_translate, y_translate)
+    end
+
+    switch = torch.rand(1)[1]
+    if switch > 0.5 then
+        --print('ROTATED')
+        theta = (torch.rand(1)[1]) * 20 - 10
+        input_image = image.rotate(input_image, theta)
+    end
+    input_image = torch.view(input_image, 1, 64, 64)
+    return input_image
 end
 batch = torch.Tensor(batch_size, 1, 64, 64):zero()
 batch_labels = torch.Tensor(batch_size):zero()
@@ -69,6 +87,7 @@ batch_labels = torch.Tensor(batch_size):zero()
 function load_batch(batch_num)
     for i = 1, batch_size do
         batch[{{i}}] = image.scale(image.load(file_paths[shuffler[i + batch_size * (batch_num - 1)]]), 64, 64)
+        batch[{{i}}] = expand_data(batch[{{i}}])
         pos = torch.ceil(shuffler[i + batch_size * (batch_num - 1)] / train_portion) 
         batch_labels[{{i}}] = pos
     end
