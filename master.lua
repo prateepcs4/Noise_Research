@@ -12,6 +12,7 @@ train_portion = 800
 batch_size = 100
 num_epoch = 50
 use_cuda = 1
+test_mode = 1
 
 file_paths = {}
 test_file_paths = {}
@@ -100,7 +101,13 @@ test_batch_labels = torch.Tensor(batch_size):zero()
 function load_test_batch(batch_num)
     for i = 1, batch_size do
         test_batch[{{i}}] = image.scale(image.load(test_file_paths[i + batch_size * (batch_num - 1)]), 64, 64)
-        pos = torch.ceil(i + batch_size * (batch_num - 1)/ (samples_per_class - train_portion))
+        pos = torch.ceil((i + batch_size * (batch_num - 1))/ (samples_per_class - train_portion))
+        --[[
+        print('---------------')
+        print(test_file_paths[i + batch_size * (batch_num - 1)])
+        print(pos)
+        print('---------------')
+        --]]
         test_batch_labels[{{i}}] = pos
     end
     
@@ -223,7 +230,6 @@ local function test()
           xlua.progress(j, math.floor(#test_file_paths / batch_size))
           load_test_batch(j)
           output = model:forward(test_batch:cuda())
-          print(#output)
           confidences, indices = torch.sort(output, true) 
 	      indices = indices:float()
           predicted_classes = indices[{{}, {1}}]
@@ -275,12 +281,17 @@ local function train()
    	end
 end
 
-
-model = create_model('A')
-if use_cuda == 1 then
+if test_mode == 0 then
+    model = create_model('A')
+    if use_cuda == 1 then
+        model = model:cuda()
+    end
+    prepare_data()
+    train()
+else
+    model = torch.load('/home/vplab/Desktop/General/NoiseResearch/Models/ComputerCharacter/model_002.t7')
     model = model:cuda()
+    model:evaluate()
+    prepare_data()
+    test()
 end
-prepare_data()
-train()
-
-test()
