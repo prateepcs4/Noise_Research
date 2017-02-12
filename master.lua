@@ -4,6 +4,7 @@ require 'cunn'
 require 'image'
 require 'nn'
 require 'optim'
+local matio = require 'matio'
 --require 'cudnn'
 
 num_class = 62
@@ -227,7 +228,7 @@ local function test()
     print('TESTING')
     correct = 0
     for j = 1, math.floor(#test_file_paths / batch_size) do
-          xlua.progress(j, math.floor(#test_file_paths / batch_size))
+          --xlua.progress(j, math.floor(#test_file_paths / batch_size))
           load_test_batch(j)
           output = model:forward(test_batch:cuda())
           confidences, indices = torch.sort(output, true) 
@@ -249,7 +250,7 @@ local function test()
           
       end
       accuracy = correct / (num_class * (samples_per_class - train_portion))
-      print(accuracy)
+      return accuracy
 end
 local function train()
    	
@@ -289,9 +290,14 @@ if test_mode == 0 then
     prepare_data()
     train()
 else
-    model = torch.load('/home/vplab/Desktop/General/NoiseResearch/Models/ComputerCharacter/model_002.t7')
-    model = model:cuda()
-    model:evaluate()
     prepare_data()
-    test()
+    test_accuracy = {}
+    for i = 1, 40 do
+        xlua.progress(i, 40)
+        model = torch.load('/home/vplab/Desktop/General/NoiseResearch/Models/ComputerCharacter/model_0'..string.format('%02d', i)..'.t7')
+        model = model:cuda()
+        model:evaluate()
+        test_accuracy[i] =  test()
+    end
+    matio.save('/home/vplab/Desktop/General/NoiseResearch/Extra/test_acc_orig.mat', test_accuracy)
 end
