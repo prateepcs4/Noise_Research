@@ -4,16 +4,18 @@ require 'cunn'
 require 'image'
 require 'nn'
 require 'optim'
-local matio = require 'matio'
---require 'cudnn'
+--local matio = require 'matio'
+require 'cudnn'
 
+cudnn.benchmark = true
 num_class = 62
 samples_per_class = 1016
 train_portion = 800
 batch_size = 100
 num_epoch = 50
 use_cuda = 1
-test_mode = 1
+test_mode = 0
+num_models = 40
 
 file_paths = {}
 test_file_paths = {}
@@ -58,7 +60,7 @@ function dirLookup(dir)
 end
 
 function prepare_data()
-    dirLookup('/home/vplab/Desktop/General/NoiseResearch/Data/Font_Noise_0')
+    dirLookup('/home/vplab/Desktop/General/NoiseResearch/Data/Font_Noise_1.04')
     shuffler = torch.randperm(num_class * train_portion)
 end
 
@@ -228,7 +230,7 @@ local function test()
     print('TESTING')
     correct = 0
     for j = 1, math.floor(#test_file_paths / batch_size) do
-          --xlua.progress(j, math.floor(#test_file_paths / batch_size))
+          xlua.progress(j, math.floor(#test_file_paths / batch_size))
           load_test_batch(j)
           output = model:forward(test_batch:cuda())
           confidences, indices = torch.sort(output, true) 
@@ -250,6 +252,7 @@ local function test()
           
       end
       accuracy = correct / (num_class * (samples_per_class - train_portion))
+      print('Test Accuracy - ', accuracy)
       return accuracy
 end
 local function train()
@@ -285,19 +288,20 @@ end
 if test_mode == 0 then
     model = create_model('A')
     if use_cuda == 1 then
+        cudnn.convert(model, cudnn)
         model = model:cuda()
     end
     prepare_data()
     train()
 else
     prepare_data()
-    test_accuracy = {}
-    for i = 1, 40 do
-        xlua.progress(i, 40)
+    for i = 1, num_models do
+        --xlua.progress(i, num_models)
         model = torch.load('/home/vplab/Desktop/General/NoiseResearch/Models/ComputerCharacter/model_0'..string.format('%02d', i)..'.t7')
         model = model:cuda()
         model:evaluate()
-        test_accuracy[i] =  test()
+        temp_acc = test() * 100
+        print(string.format('%2.2f', temp_acc))
+        --os.execute(string.format('%3.2f', temp_acc)..' >> '..out_file)
     end
-    matio.save('/home/vplab/Desktop/General/NoiseResearch/Extra/test_acc_orig.mat', test_accuracy)
 end
