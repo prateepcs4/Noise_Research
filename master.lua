@@ -223,8 +223,9 @@ local function test()
           xlua.progress(j, math.floor(#test_file_paths / batch_size))
           load_test_batch(j)
           output = model:forward(test_batch:cuda())
+          print(#output)
           confidences, indices = torch.sort(output, true) 
-	  indices = indices:float()
+	      indices = indices:float()
           predicted_classes = indices[{{}, {1}}]
 
           for i = 1, batch_size do
@@ -281,3 +282,5 @@ if use_cuda == 1 then
 end
 prepare_data()
 train()
+
+test()
